@@ -20,8 +20,8 @@ export const PERSONAL_INFO = {
   email: "gulshankr6203@gmail.com",
   phone: "+91 62055 09181",
   social: {
-    linkedin: "https://linkedin.com/in/gulshan-kumar",
-    github: "https://github.com/Gulshan-kumar",
+    linkedin: "https://www.linkedin.com/in/gulshan-kumar-157b5721a/",
+    github: "https://github.com/Gulshankrdeveloper",
   },
   lastUpdated: "November 2025"
 };
