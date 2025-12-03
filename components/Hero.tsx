@@ -1,9 +1,196 @@
-import React from 'react';
-import { Github, Linkedin, Mail, Phone, MapPin, Download } from 'lucide-react';
-import { PERSONAL_INFO } from '../constants';
+import React, { useState } from 'react';
+import { Github, Linkedin, Mail, Phone, MapPin, Download, Loader2 } from 'lucide-react';
+import { PERSONAL_INFO, EDUCATION, EXPERIENCE, PROJECTS, SKILLS } from '../constants';
 import { motion } from 'framer-motion';
 
 const Hero: React.FC = () => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadResume = async () => {
+    setIsDownloading(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+      let y = 20;
+      const lineHeight = 6;
+
+      const checkPageBreak = (heightNeeded: number) => {
+        if (y + heightNeeded > pageHeight - margin) {
+          doc.addPage();
+          y = 20;
+        }
+      };
+
+      // --- Header ---
+      doc.setFontSize(24);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(29, 78, 216); // Primary blue
+      doc.text(PERSONAL_INFO.name, margin, y);
+      y += 10;
+      
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30, 41, 59); // Slate 800
+      doc.text(PERSONAL_INFO.role, margin, y);
+      y += 8;
+
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105); // Slate 600
+      const contactInfo = `${PERSONAL_INFO.email} | ${PERSONAL_INFO.phone} | ${PERSONAL_INFO.location}`;
+      doc.text(contactInfo, margin, y);
+      y += 6;
+      doc.text(`LinkedIn: ${PERSONAL_INFO.social.linkedin} | GitHub: ${PERSONAL_INFO.social.github}`, margin, y);
+      y += 15;
+
+      // --- Section Helper ---
+      const addSectionTitle = (title: string) => {
+        checkPageBreak(15);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(29, 78, 216);
+        doc.text(title, margin, y);
+        y += 2;
+        doc.setDrawColor(203, 213, 225); // Slate 300
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, margin + contentWidth, y);
+        y += 8;
+      };
+
+      // --- Summary ---
+      addSectionTitle("Summary");
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(51, 65, 85); // Slate 700
+      const summaryLines = doc.splitTextToSize(PERSONAL_INFO.summary, contentWidth);
+      doc.text(summaryLines, margin, y);
+      y += (summaryLines.length * 5) + 10;
+
+      // --- Experience ---
+      addSectionTitle("Experience");
+      EXPERIENCE.forEach(exp => {
+        checkPageBreak(25);
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42); // Slate 900
+        doc.text(exp.role, margin, y);
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(29, 78, 216);
+        const dateText = exp.period;
+        const dateWidth = doc.getTextWidth(dateText);
+        doc.text(dateText, pageWidth - margin - dateWidth, y);
+        y += 5;
+
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(71, 85, 105);
+        doc.text(`${exp.company} • ${exp.duration || ''}`, margin, y);
+        y += 6;
+
+        if (exp.description) {
+          const descLines = doc.splitTextToSize(exp.description, contentWidth);
+          doc.text(descLines, margin, y);
+          y += (descLines.length * 5) + 5;
+        } else {
+          y += 5;
+        }
+      });
+
+      // --- Projects ---
+      checkPageBreak(30);
+      addSectionTitle("Projects");
+      PROJECTS.forEach(proj => {
+        checkPageBreak(25);
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42);
+        doc.text(proj.title, margin, y);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(29, 78, 216);
+        const projDate = proj.period;
+        const projDateWidth = doc.getTextWidth(projDate);
+        doc.text(projDate, pageWidth - margin - projDateWidth, y);
+        y += 5;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(71, 85, 105);
+        
+        // Tech stack
+        const tech = `Tech: ${proj.technologies.join(", ")}`;
+        doc.text(tech, margin, y);
+        y += 5;
+
+        // Description bullets
+        proj.description.forEach(desc => {
+          checkPageBreak(6);
+          const bullet = "• ";
+          const descLines = doc.splitTextToSize(bullet + desc, contentWidth - 5);
+          doc.text(descLines, margin + 2, y);
+          y += (descLines.length * 5);
+        });
+        y += 5;
+      });
+
+      // --- Skills ---
+      checkPageBreak(30);
+      addSectionTitle("Technologies & Skills");
+      SKILLS.forEach(skillGroup => {
+        checkPageBreak(10);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42);
+        const label = `${skillGroup.category}: `;
+        doc.text(label, margin, y);
+        
+        const labelWidth = doc.getTextWidth(label);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(71, 85, 105);
+        const items = skillGroup.items.join(", ");
+        const itemLines = doc.splitTextToSize(items, contentWidth - labelWidth);
+        doc.text(itemLines, margin + labelWidth, y);
+        y += (itemLines.length * 5) + 3;
+      });
+      y += 5;
+
+      // --- Education ---
+      checkPageBreak(30);
+      addSectionTitle("Education");
+      EDUCATION.forEach(edu => {
+        checkPageBreak(20);
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42);
+        doc.text(edu.degree, margin, y);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(29, 78, 216);
+        const eduDate = edu.period;
+        const eduDateWidth = doc.getTextWidth(eduDate);
+        doc.text(eduDate, pageWidth - margin - eduDateWidth, y);
+        y += 5;
+
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(71, 85, 105);
+        doc.text(`${edu.institution}${edu.grade ? ` • ${edu.grade}` : ''}`, margin, y);
+        y += 8;
+      });
+
+      doc.save(`${PERSONAL_INFO.name.replace(/\s+/g, '_')}_Resume.pdf`);
+    } catch (error) {
+      console.error("PDF Generation failed:", error);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <section id="about" className="pt-32 pb-16 md:pt-48 md:pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
@@ -38,13 +225,18 @@ const Hero: React.FC = () => {
               <Mail className="w-5 h-5 mr-2" />
               Contact Me
             </a>
-            <a 
-              href="#" 
-              className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+            <button 
+              onClick={handleDownloadResume}
+              disabled={isDownloading}
+              className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <Download className="w-5 h-5 mr-2" />
-              Download Resume
-            </a>
+              {isDownloading ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-5 h-5 mr-2" />
+              )}
+              {isDownloading ? 'Generating...' : 'Download Resume'}
+            </button>
           </motion.div>
 
           <motion.div
